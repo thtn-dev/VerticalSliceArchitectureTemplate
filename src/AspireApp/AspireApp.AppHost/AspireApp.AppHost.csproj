@@ -17,7 +17,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ProjectName.ApiService\ProjectName.WebApi.csproj" />
-    <ProjectReference Include="..\..\ProjectName.Web\ProjectName.Web.csproj" />
   </ItemGroup>
 
 </Project>

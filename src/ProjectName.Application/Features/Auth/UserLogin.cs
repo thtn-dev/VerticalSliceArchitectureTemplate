@@ -1,4 +1,5 @@
 ﻿using ErrorOr;
+using FastEndpoints;
 using FluentValidation;
 using MediatR;
 
@@ -22,8 +23,8 @@ public static class UserLogin
         public LoginRequestValidator()
         {
             RuleFor(x => x.Email)
-                .NotEmpty()
-                .EmailAddress();
+                .NotEmpty().WithMessage("email is required")
+                .EmailAddress().WithMessage("invalid email format");
             RuleFor(x => x.Password)
                 .NotEmpty()
                 .MinimumLength(6);
@@ -34,6 +35,11 @@ public static class UserLogin
     {
         public Task<ErrorOr<LoginResponse>> Handle(LoginRequest request, CancellationToken cancellationToken)
         {
+            if (request.Email == "trungnam")
+            {
+                return Task.FromResult<ErrorOr<LoginResponse>>(
+                    Error.Validation("Login", "Invalid email or password"));
+            }
             var fakeResult = new LoginResponse("fake_token", DateTime.UtcNow);
             return Task.FromResult<ErrorOr<LoginResponse>>(fakeResult);
         }
