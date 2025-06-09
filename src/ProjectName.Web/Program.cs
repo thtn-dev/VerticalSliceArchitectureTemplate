@@ -1,5 +1,5 @@
-using AspireApp.Web;
-using AspireApp.Web.Components;
+using ProjectName.Web;
+using ProjectName.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
