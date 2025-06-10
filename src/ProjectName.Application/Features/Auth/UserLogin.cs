@@ -1,7 +1,10 @@
-﻿using ErrorOr;
-using FastEndpoints;
+﻿using System.Security.Claims;
+using ErrorOr;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.Identity;
+using ProjectName.Application.Core.Interfaces;
+using ProjectName.Database.Entities;
 
 namespace ProjectName.Application.Features.Auth;
 
@@ -14,8 +17,7 @@ public static class UserLogin
     }
 
     public sealed record LoginResponse(
-        string Token,
-        DateTimeOffset ExpiresAt
+        string Token
     );
 
     public class LoginRequestValidator : AbstractValidator<LoginRequest>
@@ -31,17 +33,39 @@ public static class UserLogin
         }
     }
 
-    public sealed class LoginUserHandler : IRequestHandler<LoginRequest, ErrorOr<LoginResponse>>
+    public sealed class LoginUserHandler(
+        IJwtService jwtService,
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager)
+        : IRequestHandler<LoginRequest, ErrorOr<LoginResponse>>
     {
-        public Task<ErrorOr<LoginResponse>> Handle(LoginRequest request, CancellationToken cancellationToken)
+        public async Task<ErrorOr<LoginResponse>> Handle(LoginRequest request, CancellationToken cancellationToken)
         {
-            if (request.Email == "trungnam")
+            var user = await userManager.FindByEmailAsync(request.Email);
+            
+            if (user is null)
             {
-                return Task.FromResult<ErrorOr<LoginResponse>>(
-                    Error.Validation("Login", "Invalid email or password"));
+                return Error.Validation(
+                    code: "LoginUser",
+                    description: "Invalid email or password.");
             }
-            var fakeResult = new LoginResponse("fake_token", DateTime.UtcNow);
-            return Task.FromResult<ErrorOr<LoginResponse>>(fakeResult);
+            
+            var result = await signInManager.CheckPasswordSignInAsync(user, request.Password, false);
+            if (!result.Succeeded)
+            {
+                return Error.Validation(
+                    code: "LoginUser",
+                    description: "Invalid email or password.");
+            }
+            var claims = await userManager.GetClaimsAsync(user);
+            claims.Add(new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()));
+            claims.Add(new Claim(ClaimTypes.Email, user.Email ?? string.Empty));
+            var token = await jwtService.GenerateJwtTokenAsync(claims);
+            
+            return new LoginResponse(token)
+            {
+                Token = token
+            };
         }
     }
 }
